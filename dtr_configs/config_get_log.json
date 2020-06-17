@@ -1,0 +1,103 @@
+{
+    "active": true,
+    "save_logs": true,
+    "log_dest": "~/dtr_logs",
+    "models": [
+        "lstm",
+        "resnet32",
+        "treelstm",
+        "densenet100",
+        "unet",
+        "unroll_gan"
+    ],
+    "dry_run": 10,
+    "dtr_torch_cmd": "~/dtr_venv/bin/python3",
+    "n_inputs": 1,
+    "n_reps": 50,
+    "dtr_settings": {
+        "default": {
+            "batch_size": 32
+        },
+        "resnet32": [
+            {
+                "type": "dtr",
+                "kind": "fixed",
+                "memory_budget": [
+                    12e+9
+                ],
+                "batch_size": 32,
+                "timeout": 50
+            }
+        ],
+        "densenet100": [
+            {
+                "type": "dtr",
+                "kind": "fixed",
+                "memory_budget": [
+                    12e+9
+                ],
+                "batch_size": 32,
+                "timeout": 50
+            }
+        ],
+        "treelstm": [
+            {
+                "type": "dtr",
+                "kind": "fixed",
+                "memory_budget": [
+                    12e+9
+                ],
+                "batch_size": 100,
+                "extra_params": {
+                    "in_dim": 10,
+                    "mem_dim": 300,
+                    "dep": 6
+                },
+                "timeout": 60
+            }
+        ],
+        "unet": [
+            {
+                "batch_size": 4,
+                "type": "dtr",
+                "kind": "fixed",
+                "memory_budget": [
+                    12e+9
+                ],
+                "timeout": 60
+            }
+        ],
+        "lstm": [
+            {
+                "type": "dtr",
+                "kind": "fixed",
+                "batch_size": 32,
+                "memory_budget": [
+                    12e+9
+                ],
+                "extra_params": {
+                    "mem_dim": 300,
+                    "in_dim": 10,
+                    "input_size": 100
+                },
+                "timeout": 50
+            }
+        ],
+        "unroll_gan" : [
+            {
+                "type" : "dtr",
+                "kind": "fixed",
+                "batch_size" : 32,
+                "memory_budget": [
+                    12e+9
+                ],
+                "timeout": 60
+            }
+        ]
+    },
+    "note_on_report_errors": "false = stop the experiment if a trial errors out, true = keep going in case we want to report OOMs (manually inspect what kind of error it was!",
+    "report_errors": true,
+    "set_seed": true,
+    "seed": 1,
+    "notify": []
+}
