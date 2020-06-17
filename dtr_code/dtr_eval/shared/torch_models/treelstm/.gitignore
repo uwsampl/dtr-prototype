@@ -1,0 +1,8 @@
+checkpoints/
+data/
+lib/*.class
+lib/stanford-parser
+lib/stanford-tagger
+.ftpconfig
+.ftpignore
+.vscode/

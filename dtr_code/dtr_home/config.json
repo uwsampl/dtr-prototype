@@ -1,0 +1,6 @@
+{
+    "tmp_data_dir": "~/dtr-data",
+    "backup_dir": "~/dtr-backup",
+    "setup_dir": "~/dtr-setup",
+    "randomize": false
+}
