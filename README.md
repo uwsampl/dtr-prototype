@@ -86,7 +86,7 @@ Once configured, the dashboard can be invoked as follows: `./dashboard/dashboard
 
 ### Our Modified PyTorch Code
 
-We build our DTR prototype by modifying [https://github.com/pytorch/pytorch](PyTorch), 
+We build our DTR prototype by modifying [PyTorch](https://github.com/pytorch/pytorch), 
 starting from commit `1546d2afeb98fcd7bc5b58261d6e31ad7794e833`. 
 To avoid compilications with git submodules, we simply include the entire source code, 
 including submodules, in the `dtr_pytorch` folder (forgive us).
@@ -115,7 +115,7 @@ The `run_dashboard.sh` script in `dashboard/dashboard` ensures that references t
 
 Requires the dependencies in `requirements.txt`. Please install these files in whatever Python environments you wish to use by running `pip3 install -r requirements.txt`. This should also be done for the `venv` for installing the DTR-modified PyTorch (`dtr_venv/bin/pip3 install -r requirements.txt`).
 
-The Unrolled GAN implementation in `dtr_eval/shared/torch_models/unroll_gan` also requires the library [https://github.com/facebookresearch/higher](Higher), which could not be included in `requirements.txt`, so if you want to execute that model for logging, you must install Higher as follows:
+The Unrolled GAN implementation in `dtr_eval/shared/torch_models/unroll_gan` also requires the library [Higher](https://github.com/facebookresearch/higher), which could not be included in `requirements.txt`, so if you want to execute that model for logging, you must install Higher as follows:
 
 ```
 git clone git@github.com:facebookresearch/higher.git
@@ -126,7 +126,7 @@ pip3 install .
 
 ### Data setup
 
-The original [https://github.com/dasguptar/treelstm.pytorch](TreeLSTM version) (`treelstm_old`) we used requires pulling in external data to run its trials, if you want to use it.
+The original [TreeLSTM version](https://github.com/dasguptar/treelstm.pytorch) (`treelstm_old`) we used requires pulling in external data to run its trials, if you want to use it.
 
 To do this, run `fetch_and_preprocess.sh` in `dtr_eval/shared/torch_models/treelstm` in order to pull in the data (about 2GB). The script depends on relative directories, so you must be in that directory before calling it. It also requires having the Java JDK installed (we used Javac 11, but it is likely that an earlier version would work).
 
@@ -156,7 +156,7 @@ In particular, the configs include `resnet32`, `resnet1202`, `densenet100`, `une
 * https://github.com/milesial/Pytorch-UNet
 * https://github.com/mk-minchul/unroll_gan
 
-We also include several dynamic models taken from public implementations, namely LSTM and GRU encoders from [https://github.com/pytorch/examples/tree/master/word_language_model](PyTorch's officiel word language model examples) and [https://github.com/dasguptar/treelstm.pytorch](TreeLSTM). We include these as `lstm_encoder`, `gru_encoder`, and `treelstm_old`. We also provide LSTM RNN and TreeLSTM implementations we wrote ourselves to avoid the memory bottlenecks we encountered on the publicly available versions, called simply `lstm` and `treelstm`.
+We also include several dynamic models taken from public implementations, namely LSTM and GRU encoders from [PyTorch's official word language model examples](https://github.com/pytorch/examples/tree/master/word_language_model) and [TreeLSTM](https://github.com/dasguptar/treelstm.pytorch). We include these as `lstm_encoder`, `gru_encoder`, and `treelstm_old`. We also provide LSTM RNN and TreeLSTM implementations we wrote ourselves to avoid the memory bottlenecks we encountered on the publicly available versions, called simply `lstm` and `treelstm`.
 
 ### Saving DTR Logs
 
