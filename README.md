@@ -93,7 +93,7 @@ including submodules, in the `dtr_pytorch` folder (forgive us).
 
 Most of our modifications to standard PyTorch are in `aten/src/ATen/native/native_functions.yaml`.
 However, the bulk of our changes are in new files we added ourselves:
-* `aten/src/ATen/CheckpointTensorImpl.h` and ``aten/src/ATen/CheckpointTensorImpl.cc` (checkpointing logic)
+* `aten/src/ATen/CheckpointTensorImpl.h` and `aten/src/ATen/CheckpointTensorImpl.cc` (checkpointing logic)
 * `aten/src/ATen/Logger.h` (logging)
 * `aten/src/ATen/native/Checkpoint.cc` (operator overloads)
 
