@@ -19,7 +19,7 @@ class DTR(Heuristic):
     return compute / denominator if denominator > 0 else math.inf
 
   def __str__(self):
-    return 'DTR-Full'
+    return r'$h_{DTR}$'
 
 @register_heuristic
 class DTREqClass(Heuristic):
@@ -40,7 +40,7 @@ class DTREqClass(Heuristic):
     return cpi.compute / denom if denom > 0 else math.inf
 
   def __str__(self):
-    return 'DTR-EqClass'
+    return r'$h_{DTR}^{eq}$'
 
 @register_heuristic
 class DTRLocal(Heuristic):
@@ -55,7 +55,7 @@ class DTRLocal(Heuristic):
     return s.compute / denom if denom > 0 else math.inf
 
   def __str__(self):
-    return 'DTR-Local'
+    return r'$h_{DTR}^{local}$'
 
 @register_heuristic
 class DTRUnopt(Heuristic):

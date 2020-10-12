@@ -9,6 +9,7 @@ This repo contains the following:
 * `dtr_configs`: Configuration files for running the prototype DTR implementation
 * `dtr_code`: DTR prototype implementation and infrastructure for running the experimental evaluation
 * `simrd`: Simulator implementation and logs used to generate figures in the simulated evaluation
+* `checkmate_comp`: Modified version of Jain et al's MLSys 2020 reproducibility artifact that includes comparisons against `simrd` as a solver
 
 This corresponds to the versions of the simulated and PyTorch implementation in the present preprint;
 we may make our development repositories public once they become more stable.
@@ -17,55 +18,114 @@ Note: We ran the simulated and prototype evaluation using Python 3.7.4 on an Ubu
 
 ## Running the Simulator
 
-The simulator is named "simrd": Simulated (tensor) rematerialization, dynamic
+### Setup
+#### Step 1. Install Anaconda and set up environment
+Install the Anaconda Python environment manager from
+https://www.anaconda.com/distribution/.
+Next, create and activate the `dtr-iclr21` environment:
+```
+conda create -n dtr-iclr21 python=3.7
+conda activate dtr-iclr21
+```
 
-### Quickstart
-Assuming you have Python 3 and `venv` (for Python virtual environments), and
-have a Unix-like system with `bash`, simply run `bash setup.sh` from the `simrd`
-root and then `bash run.sh`.
+Now, export the `PYTHONPATH` to include this directory, so that the experiments
+can locate the necessary files:
+```
+export PYTHONPATH=.:$PYTHONPATH
+```
 
-This will output the paper figures (and data) to the `data/` directory.
+#### Step 2. Install dependencies and unzip logs
+Install the dependencies for the simulator by running (in the new environment):
+```
+python -m pip install -r requirements.txt
+```
 
-### Full Setup
-#### Python Dependencies
-First, make sure `pip` is up to date by running
-`python3 -m pip install --upgrade pip`.
-Otherwise, the following step may fail with an error message about the `wheel`
-package.
+The simulator comes with logs so that they do not need to be gathered, although
+we provide instructions for gathering logs in the prototype folder. These logs
+have been zipped to `logs.zip`. Extract them to the `logs` folder:
+```
+unzip logs.zip
+```
 
-To install the Python 3 dependencies for `simrd`, run 
-`python3 -m pip install requirements.txt`
-from the `simrd` root. We highly recommend using a new `venv` for this so that
-package versions do not conflict (and make sure to update `pip` in the `venv`).
 
-**NOTE:** we have only tested the simulator on Linux and macOS systems with the
-`bash` shell, and cannot guarantee it will work on Windows.
+### Run Simulations and Plotting
+Finally, run the simulated evaluation by running
+```
+python simrd_experiments/eval/pareto/main.py
+```
 
-#### Unzip PyTorch Logs
-Unzip the `models.zip` file in the `simrd` root a directory named `models/` (also
-in the `simrd` root).
+The resulting data and figures can be found under the `data` directory.
+Note that this can take a few hours due to the ablation study.
 
-### Run Simulated Evaluations
-To generate data and plots for all the figures in the paper (full pareto curve
-evaluation, ablation study, banishing, tensor accesses), run
-`env PYTHONPATH=.:$PYTHONPATH python3 experiments/eval/pareto/main.py`
-from the `simrd` root.
+## DTR vs Checkmate Baselines
 
-The resulting figures will be saved in `data/` (and raw data in
-`data/eval/pareto`).
+### Installation
+#### Step 0: Set up DTR simulator (simrd)
+First, follow the setup instructions for the DTR simulator (simrd), which should
+be bundled with this in the parent directory.
 
-**NOTE**: on some systems, Python will complain about the module path, so we
-need to export `PYTHONPATH` to include the `simrd` root.
+#### Step 1: Install Anaconda
+Make sure that you have created the DTR Anaconda environment and have it
+activated, as per the simulator instructions. Activate the environment by:
+```
+conda activate dtr-iclr21
+```
 
-## Running the PyTorch Prototype Implementation
+#### Step 2: Install the Checkmate `remat` package and dependencies
+From this directory,
+```
+$ conda install -c conda-forge python-graphviz
+$ pip install -e .
+```
+Next, install tensorflow with
+```
+$ pip install tensorflow==2.0.1
+```
 
-The prototype implementation is needed both for generating logs for the simulator as well as for directly measuring the prototype's performance.
+#### Step 3: Install Gurobi
+Checkmate uses the Gurobi optimziation library to solve an integer linear program that chooses a recomputation schedule for a given neural network architecture. This requires a license to Gurobi, which is free for academic use. The `grbgetkey` command used below must be run on a computer connected to a university network directly or via a VPN.
+
+1. Please follow these instructions to install Gurobi on your system: https://www.gurobi.com/documentation/quickstart.html. For example, on Linux, follow `https://www.gurobi.com/documentation/9.0/quickstart_linux/software_installation_guid.html`.
+2. Make an academic account with Gurobi at: https://pages.gurobi.com/registration
+3. Request an acadmic license at: https://www.gurobi.com/downloads/end-user-license-agreement-academic/
+4. Install the license by running the `grbgetkey` command at the end of the page. Ensure you are on an academic network like Airbears2 for UC Berkeley. If you save the license to a non-default location (outside your home directory), you will need to export the `GRB_LICENSE_FILE` variable with the path to the licence.
+5. Set up the gurobipy Anaconda channel by running `conda config --add channels http://conda.anaconda.org/gurobi`
+6. Install gurobipy by running: `conda install gurobi`
+
+### Reproducing Figure 2: Computational overhead versus memory budget
+We have provided a reproduceability script adapted from Checkmate's,
+as `reproduce_simrd.sh`.
+
+First, run the Checkmate baselines:
+```
+bash reproduce_simrd.sh baselines
+```
+Note that the Checkmate baselines include Checkmate's ILP solver, which took up
+to 24 hours on our machine to complete in total for the models.
+
+Then, run the DTR simulator (simrd):
+```
+bash reproduce_simrd.sh simrd
+```
+
+Lastly, plot the results:
+```
+bash reproduce_simrd.sh plot
+```
+
+The results will be saved under `data/budget_sweep`.
+
+## Running the Prototype Implementation
 
 ### Executive Summary
 
-All one-time setup is collected in `setup.sh`. Once all the setup is complete, a configuration of the prototype can be run by calling `./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments` (this is a stripped-down version of the Relay dashboard in https://github.com/uwsampl/relay-bench).
+All one-time setup is collected in `setup.sh`. Once all the setup is complete, a configuration of the prototype can be run by calling `./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments`
+
+*Important*: Please ensure to set the environment variable `export CUDA_LAUNCH_BLOCKING=1` to put PyTorch into blocking mode before running timing trials. This is required to ensure the correctness of DTR's profiling timings.
 
 You can change the configuration of the prototype by substituting `dtr_home/config/experiments/pareto_curve/config.json` with one of the configuration files in `dtr_configs`. See below for how to post a summary to Slack (most convenient). Any visualizations produced will be found in `dtr_home/results/experiments/graph` and data files (like those in `data_files`) will be in `dtr_home/results/experiments/data`. If logging is enabled in the configuration (`"save_logs"`), logs will be deposited in `~/dtr_logs` (configurable under `"log_dest"`).
+
+To reproduce the graph in Figure 5 without having to rerun the eval, you can run `./dtr_code/graphing_util/visualize_pareto_curve.py dtr_configs/full-run-config.json data_files/data_full`.  
 
 ### Commands and Reading Results
 
@@ -75,51 +135,35 @@ It is recommended, though not necessary, that you use the dashboard's Slack inte
 
 We provide three configs in `dtr_configs` that can be used for running the same experiments as in the paper:
 
-* `config_get_log.json` for obtaining logs for the simulator (we provide the logs used in the paper's figures in `dtr_logs`)
-* `config_run_graphs.json` for generating the prototype performance graphs in the paper (we provide the data files generated in `dtr_data`)
-* `config_large_inputs.json` for measuring the prototype's performance on large inputs for ResNet-1202 and TreeLSTM (data files also provided in `dtr_data`)
-* `config_encoders.json` to run the encoder models on which DTR and the simulator could not save memory (`treelstm_old` will time out, but you can increase the `timeout` setting to have it complete, though it may take a long time).
+* `data-full.json` for generating the prototype data used in the profiling comparison in Figure 4
+* `data-big-inputs.json` for generating the prototype performance data reported in Table 1
 
 Simply substitute one of these files for the config in `dtr_home/config/experiments/pareto_curve/config.json` (please ensure it will still be named `config.json`) in order to run with their settings.
 
-Once configured, the dashboard can be invoked as follows: `./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments`
+Once configured, the dashboard can be invoked as follows: 
+```
+export CUDA_LAUNCH_BLOCKING=1
+./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments
+```
 
-### Our Modified PyTorch Code
+### Creating the PyTorch Code
 
-We build our DTR prototype by modifying [PyTorch](https://github.com/pytorch/pytorch), 
-starting from commit `1546d2afeb98fcd7bc5b58261d6e31ad7794e833`.
-Because our logging mechanism required an additional git submodule for its JSON library dependency, we include our changes to PyTorch as a patch file,
-`pytorch_changes.patch` in `dtr_code`.
+Due to PyTorch's use of submodules and our own additional dependencies, we do need to provide a properly configured git repository with a history. To preserve anonymity, we do this by providing a git patch that, if applied to the correct commit of PyTorch, will restore our code. The file is provded as `dtr-implementation.patch`.
 
-You can restore our version of PyTorch by applying the path as following:
+The following steps will restore the PyTorch code:
 ```
 git clone --recursive https://github.com/pytorch/pytorch dtr_pytorch
 cd dtr_pytorch
-git checkout 1546d2afeb98fcd7bc5b58261d6e31ad7794e833
+# the commit we started from
+git checkout d15b9d980c0cd504ce6e82db4e88f66cee7e0289
 git submodule sync
 git submodule update --init --recursive
-# apply patch and restore submodules
-git am --signoff < ../pytorch_changes.patch
+
+# patch modifies submodules too so sync again after applying
+git am --signoff < ../dtr-implementation.patch
 git submodule sync
 git submodule update --init --recursive
 ```
-
-To avoid compilications with git submodules, we simply include the entire source code, 
-including submodules, in the `dtr_pytorch` folder (forgive us).
-
-Most of our modifications to standard PyTorch are in `aten/src/ATen/native/native_functions.yaml`.
-However, the bulk of our changes are in new files we added ourselves:
-* `aten/src/ATen/CheckpointTensorImpl.h` and `aten/src/ATen/CheckpointTensorImpl.cc` (checkpointing logic)
-* `aten/src/ATen/Logger.h` (logging)
-* `aten/src/ATen/native/Checkpoint.cc` (operator overloads)
-
-The model setup in `dtr_code/dtr_eval/shared/model_util.py` and execution in `dtr_code/dtr_eval/shared/run_torch_trial.py`
-demonstrate how to invoke DTR's checkpointing.
-In general, a tensor should be converted to a DTR-managed one using the `checkpoint()` method,
-which will ensure that any computation involving that tensor will go through DTR's overload layer.
-Once any computation involving checkpointed tensors is finished, those tensors should be converted
-into an ordinary PyTorch tensor using `decheckpoint()`.
-A memory budget for DTR can be specified using `torch.set_memory_budget(budget)`.
 
 ### Global Dependencies
 
@@ -131,7 +175,7 @@ The `run_dashboard.sh` script in `dashboard/dashboard` ensures that references t
 
 Requires the dependencies in `requirements.txt`. Please install these files in whatever Python environments you wish to use by running `pip3 install -r requirements.txt`. This should also be done for the `venv` for installing the DTR-modified PyTorch (`dtr_venv/bin/pip3 install -r requirements.txt`).
 
-The Unrolled GAN implementation in `dtr_eval/shared/torch_models/unroll_gan` also requires the library [Higher](https://github.com/facebookresearch/higher), which could not be included in `requirements.txt`, so if you want to execute that model for logging, you must install Higher as follows:
+The Unrolled GAN implementation in `dtr_eval/shared/torch_models/unroll_gan` also requires the library Higher, which could not be included in `requirements.txt`, so if you want to execute that model for logging, you must install Higher as follows:
 
 ```
 git clone git@github.com:facebookresearch/higher.git
@@ -139,12 +183,6 @@ cd higher
 pip3 install .
 ~/dtr_venv/bin/pip3 install .
 ```
-
-### Data setup
-
-The original [TreeLSTM version](https://github.com/dasguptar/treelstm.pytorch) (`treelstm_old`) we used requires pulling in external data to run its trials, if you want to use it.
-
-To do this, run `fetch_and_preprocess.sh` in `dtr_eval/shared/torch_models/treelstm` in order to pull in the data (about 2GB). The script depends on relative directories, so you must be in that directory before calling it. It also requires having the Java JDK installed (we used Javac 11, but it is likely that an earlier version would work).
 
 ### DTR Setup
 
@@ -164,15 +202,13 @@ Once these steps are finished, `~/dtr_venv/bin/python3` will point to a Python e
 
 ### Supported Models
 
-See `dtr_eval/shared/validate_config.py` for a list of all supported models.
+See `dtr_eval/shared/validate_config.py` for a list of all supported models, taken from various public implementations (noted in their definitions in `dtr_eval/shared/torch_models`).
 
-In particular, the configs include `resnet32`, `resnet1202`, `densenet100`, `unet`, and `unroll_gan` (supported by the simulator but not the prototype unless the budget is set to infinite for logging), adapted from various public implementations:
+In particular, the models include, among others, `resnet32`, `resnet1202`, `densenet100`, `unet`, and `unroll_gan`, adapted from various public implementations:
 * https://github.com/akamaster/pytorch_resnet_cifar10
 * https://github.com/bamos/densenet.pytorch
 * https://github.com/milesial/Pytorch-UNet
 * https://github.com/mk-minchul/unroll_gan
-
-We also include several dynamic models taken from public implementations, namely LSTM and GRU encoders from [PyTorch's official word language model examples](https://github.com/pytorch/examples/tree/master/word_language_model) and [TreeLSTM](https://github.com/dasguptar/treelstm.pytorch). We include these as `lstm_encoder`, `gru_encoder`, and `treelstm_old`. We also provide LSTM RNN and TreeLSTM implementations we wrote ourselves to avoid the memory bottlenecks we encountered on the publicly available versions, called simply `lstm` and `treelstm`.
 
 ### Saving DTR Logs
 

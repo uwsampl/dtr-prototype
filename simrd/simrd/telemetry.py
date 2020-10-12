@@ -5,7 +5,7 @@ from .tensor import Storage, Operator, Tensor
 class Telemetry:
   # TODO: do we want to log Tensor/Storage remat uses after death? might be useful
   SUMMARY_STATS = [
-    'model_compute', 'remat_compute', 'max_memory', 'model_pinned_memory', 'bottleneck_memory',
+    'model_compute', 'remat_compute', 'max_memory', 'model_const_memory', 'bottleneck_memory',
     'heuristic_access_count', 'heuristic_eval_count'
   ]
   STORAGE_STATS = [

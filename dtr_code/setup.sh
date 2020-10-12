@@ -10,28 +10,23 @@
 # to point to the right python executable
 python3 -m venv ~/dtr_venv
 
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt --user
 ~/dtr_venv/bin/pip3 install -r requirements.txt
 
 git clone --recursive https://github.com/pytorch/pytorch dtr_pytorch
 cd dtr_pytorch
-git checkout 1546d2afeb98fcd7bc5b58261d6e31ad7794e833
+git checkout d15b9d980c0cd504ce6e82db4e88f66cee7e0289
 git submodule sync
 git submodule update --init --recursive
 # apply patch and restore submodules
-git am --signoff < ../pytorch_changes.patch
+git am --signoff < ../dtr-implementation.patch
 git submodule sync
 git submodule update --init --recursive
 
 # The lengthy installation of PyTorch
+~/dtr_venv/bin/python3 -m pip uninstall torch
 ~/dtr_venv/bin/python3 setup.py develop
 cd ..
-
-# Comment out if you do not want to run treelstm_old;
-# this can take over 10 minutes to run
-cd dtr_eval/shared/torch_models/treelstm
-./fetch_and_preprocess.sh
-cd ../../../..
 
 # Comment out if you do not want to run unroll_gan,
 # which needs higher
@@ -40,5 +35,6 @@ cd higher
 pip3 install .
 ~/dtr_venv/bin/pip3 install .
 
-# You can now run the experiments from the dtr_code directory with the following command:
+# You can now run the experiments from the dtr_code directory with the following commands:
+# export CUDA_LAUNCH_BLOCKING=1
 # ./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments

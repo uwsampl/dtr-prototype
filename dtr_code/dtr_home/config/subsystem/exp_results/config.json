@@ -1,5 +1,8 @@
 {
     "active": true,
-    "webhook_url": "place a slack webhook URL here to post results to a slack channel",
-    "slack_description": "DTR Results"
+    "slack_client_token": "slack API token here",
+    "channel_id": ["list of channels you want the Slack report to be posted to"],
+    "report_images_comment": "If true, will post all graphs for each experiment in Slack thread",
+    "report_images": true,
+    "slack_description": "Something you want to show up above the slack integration message"
 }

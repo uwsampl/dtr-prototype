@@ -6,15 +6,10 @@ from ..optimization import *
 from ..telemetry import Telemetry
 
 HEURISTICS = {}
-HEURISTICS_NAMES = {}
 
 def register_heuristic(cls):
   cls.ID = len(HEURISTICS)
-  h_str = str(cls())
-  assert h_str not in HEURISTICS, \
-    'cannot have the same description as an existing heuristic: {}'.format(cls)
-  HEURISTICS[h_str] = cls
-  HEURISTICS_NAMES[cls.__name__] = cls
+  HEURISTICS[cls.__name__] = cls
   return cls
 
 class Heuristic:

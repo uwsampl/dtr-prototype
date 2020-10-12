@@ -42,6 +42,7 @@ class RuntimeV2(TelemetrizedRuntimeBase):
 
   def _evict(self, s : Storage):
     assert s.ref_int == 0, 'tried to evict locked Storage {}'.format(s)
+    assert not s.pinned and s.tensors[0].op.name != 'constant'
     s.material = False
     s.meta['last_evict'] = self.clock
     self.memory_usage -= s.size

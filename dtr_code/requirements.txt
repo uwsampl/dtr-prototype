@@ -1,7 +1,12 @@
+wheel
+dataclasses
+slackclient
+PyYAML
+librosa
+# torch==1.4.0 # leave commented out for initializing venv, uncomment for baseline
+numba==0.48
 seaborn
 numpy==1.17.3
-torch==1.4.0
-torchvision==0.5.0
 tqdm==4.31.1
 pandas==0.24.2
 matplotlib==2.2.3

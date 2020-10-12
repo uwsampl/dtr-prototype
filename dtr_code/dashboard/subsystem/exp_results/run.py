@@ -8,9 +8,10 @@ import textwrap
 
 from common import invoke_main, read_config, write_status, read_json, validate_json
 from dashboard_info import DashboardInfo
+from slack import WebClient
 from slack_util import (generate_ping_list,
                         build_field, build_attachment, build_message,
-                        post_message)
+                        post_message, new_client, upload_image)
 
 def attach_duration(message, duration=None):
     if duration is None:
@@ -31,14 +32,42 @@ def failed_experiment_field(exp, stage_statuses, stage, duration=None, notify=No
 
     return build_field(title=exp, value=message)
 
+def send_graphs(config, info, client, output_dir):
+    img_dict = dict()
+    for (curr_dir, _, files) in os.walk(info.exp_graphs):
+        for filename in files:
+            if filename.endswith('.png') or filename.endswith('.jpg'):
+                if curr_dir not in img_dict:
+                    img_dict[curr_dir] = []
+                img_dict[curr_dir].append(filename)
+    for (dir_name, files) in img_dict.items():
+        exp_name = dir_name.split(os.path.sep)[-1] if os.path.sep in dir_name else dir_name
+        success, resp, msg = post_message(client, config['channel_id'], build_message(text=f'Graphs of {exp_name}'))
+        if not success:
+            return (False, msg)
+        channel_thread_ts = list(map(lambda resp: (resp.data['channel'], resp.data['ts']), resp))
+        for filename in files:
+            file_path = f'{dir_name}/{filename}'
+            for channel, thread_ts in channel_thread_ts:
+                success, _, msg = upload_image(client, channel, file_path, filename, thread_ts=thread_ts)
+                if not success:
+                    return (False, msg)
+    return True, 'success'
 
 def main(config_dir, home_dir, output_dir):
     config = read_config(config_dir)
-    if 'webhook_url' not in config:
-        write_status(output_dir, False, 'No webhook URL given')
+    if 'channel_id' not in config:
+        write_status(output_dir, False, 'No channel token given')
+        return 1
+    
+    success, msg, client = new_client(config)
+    info = DashboardInfo(home_dir)
+
+    if not success:
+        write_status(output_dir, False, msg)
         return 1
 
-    webhook = config['webhook_url']
+    slack_channel = config['channel_id']
     description = ''
     if 'description' in config:
         description = config['description']
@@ -123,14 +152,20 @@ def main(config_dir, home_dir, output_dir):
                 title='Failed to Visualize',
                 text=', '.join(failed_graphs)))
 
-    success, report = post_message(
-        webhook,
+    success, _, report = post_message(
+        client,
+        slack_channel,
         build_message(
             text='*Dashboard Results*{}'.format(
                 '\n' + description if description != '' else ''),
             attachments=attachments))
-    write_status(output_dir, success, report)
+    if config.get('report_images', False):
+        success, msg = send_graphs(config, info, client, output_dir)
+        if not success:
+            write_status(output_dir, False, msg)
+            return 1
 
+    write_status(output_dir, success, report)
 
 if __name__ == '__main__':
     invoke_main(main, 'config_dir', 'home_dir', 'output_dir')

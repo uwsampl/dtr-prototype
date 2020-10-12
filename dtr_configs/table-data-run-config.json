@@ -1,0 +1,251 @@
+{
+    "active": true,
+    "save_logs": false,
+    "log_dest": "~/dtr_nightly_logs",
+    "models": [
+      "resnet1202",
+      "treelstm",
+      "unet",
+      "transformer"
+    ],
+    "ignore_kind": ["ratio"],
+    "dtr_torch_cmd": "~/dtr_venv/bin/python3",
+    "dry_run": 5,
+    "n_inputs": 1,
+    "n_reps": 10,
+    "dtr_settings": {
+        "default": {
+            "batch_size": 32,
+            "timeout" : 360
+        },
+        "resnet32": [
+            {
+              "type" : "baseline",
+              "batch_size" : [32, 64, 128, 256],
+              "extra_params": {
+                  "height": 224,
+                  "width": 224
+              }
+
+            },
+            {
+              "type": "dtr",
+              "kind": "param_sweep",
+              "use_profiling": true,
+              "memory_budget": [11.0e+9, 8.0e+9, 6.0e+9, 4.0e+9, 2.0e+9],
+              "batch_size": [32, 64, 128, 256],
+              "extra_params": {
+                  "height": 224,
+                  "width": 224
+              }
+            }
+        ],
+        "densenet100": [
+            {
+                "type": "baseline",
+                "batch_size": [64, 128, 256, 512],
+                "extra_params": {
+                  "height": 32,
+                  "width": 32 
+                }
+            },
+            {
+              "type": "dtr",
+              "kind": "param_sweep",
+              "use_profiling": true,
+              "batch_size": [64, 128, 256, 512],
+              "memory_budget": [11.0e+9, 8.0e+9, 6.0e+9, 4.0e+9, 2.0e+9], 
+              "extra_params": {
+                "height": 32,
+                "width": 32 
+              }
+            }
+        ],
+        "treelstm": [
+            {
+                "type": "baseline",
+                "batch_size": 100,
+                "timeout": 100,
+                "extra_params": {
+                    "in_dim": 300,
+                    "mem_dim": 1090,
+                    "dep": 10
+                }
+            },
+            {
+              "type": "dtr",
+              "batch_size":100,
+              "timeout": 100,
+              "memory_budget": 10.8e+9,
+              "extra_params": [{
+                "in_dim": 300,
+                "mem_dim": 1090,
+                "dep": 10
+              },{
+                "in_dim": 350,
+                "mem_dim": 1090,
+                "dep": 10
+              },{
+                "in_dim": 400,
+                "mem_dim": 1090,
+                "dep": 10
+              },{
+                "in_dim": 450,
+                "mem_dim": 1090,
+                "dep": 10
+              }]
+            }
+        ],
+        "unet": [
+            {
+                "type": "baseline",
+                "batch_size": [8, 9, 10],
+                "extra_params": {
+                  "width": 416,
+                  "height": 608
+                }
+            },
+            {
+              "type": "dtr",
+              "kind": "param_sweep",
+              "use_profiling": true,
+              "memory_budget": [6.0e+9],
+              "batch_size": [8, 9, 10],
+              "extra_params": {
+                "width": 416,
+                "height":608 
+              }
+            }
+        ],
+        "lstm": [
+            {
+                "type": "baseline",
+                "batch_size": 5000,
+                "input_params": {
+                    "mem_dim": 1024,
+                    "in_dim": 5000,
+                    "input_size":16384 
+                }
+            },
+            {
+              "type": "dtr",
+              "kind": "param_sweep",
+              "use_profiling": true,
+              "memory_budget": 10.8e+9,
+              "batch_size": 64,
+              "extra_params": [{
+                "mem_dim": 300,
+                "in_dim": 100,
+                "input_size": 500
+              }]
+            }
+        ],
+        "lstm_encoder": [
+            {
+                "type": "dtr",
+                "kind": "fixed",
+                "dry_run": 5,
+                "n_inputs": 5,
+                "n_reps": 15,
+                "save_logs" : true,
+                "memory_budget": -1
+            }
+        ],
+        "gru_encoder": [
+            {
+                "type": "dtr",
+                "kind": "fixed",
+                "dry_run": 5,
+                "n_inputs": 5,
+                "n_reps": 15,
+                "save_logs" : true,
+                "memory_budget": -1
+            }
+        ],
+        "treelstm_old": [
+            {
+                "type": "dtr",
+                "kind": "fixed",
+                "dry_run": 5,
+                "n_inputs": 5,
+                "n_reps": 15,
+                "save_logs" : true,
+                "memory_budget": [
+                    -1
+                ]
+            }
+        ],
+        "resnet1202": [
+            { "type" : "baseline",
+              "batch_size" : [90, 100, 110, 120, 130, 140],
+              "timeout": 360
+            },
+            {
+              "type": "dtr",
+              "kind": "param_sweep",
+              "use_profiling": true,
+              "memory_budget": [6.0e+9],
+              "batch_size": [90, 100, 110, 120, 130, 140]
+            }
+        ],
+        "inceptionv4": [
+          {
+            "type": "baseline",
+            "batch_size": [16, 32, 64, 128, 256],
+            "timeout": 200
+          },
+          {
+            "type": "dtr",
+            "kind": "param_sweep",
+            "use_profiling": true,
+            "memory_budget": [11.0e+9, 8.0e+9, 6.0e+9, 4.0e+9, 2.0e+9],
+            "batch_size": [16, 32, 64, 128, 256]
+          }
+        ],
+        "inceptionv3": [
+          {
+            "type": "baseline",
+            "batch_size": [16, 32, 64, 128, 256],
+            "timeout": 200
+          },
+          {
+            "type": "dtr",
+            "kind": "param_sweep",
+            "use_profiling": true,
+            "memory_budget": [11.0e+9, 8.0e+9, 6.0e+9, 4.0e+9, 2.0e+9],
+            "batch_size": [16, 32, 64, 128, 256]
+          }
+        ],
+        "transformer": [
+          {
+            "type": "baseline",
+            "batch_size": [40, 50, 60, 70, 80, 90],
+            "extra_params": {
+              "input_seq_length":256 
+            }
+          },
+          {
+            "type": "dtr",
+            "kind": "param_sweep",
+            "use_profiling": true,
+            "memory_budget": [8.8e+9],
+            "batch_size": [40, 50, 60, 70, 80, 90],
+            "extra_params": {
+              "input_seq_length":256 
+            }
+          }
+        ],
+        "unroll_gan": [
+          {
+            "type": "dtr",
+            "kind": "fixed",
+            "memory_budget": 11.0e+9
+          }
+        ]
+    },
+    "note_on_report_errors": "false = stop the experiment if a trial errors out, true = keep going in case we want to report OOMs (manually inspect what kind of error it was!",
+    "report_errors": true,
+    "set_seed": true,
+    "seed": 1,
+    "notify": []
+}

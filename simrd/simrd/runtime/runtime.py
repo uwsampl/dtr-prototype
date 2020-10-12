@@ -1,6 +1,8 @@
 from simrd.tensor import *
 from simrd.telemetry import Telemetry
 
+from simrd.parse.graph import GOp
+
 class RematExceededError(RuntimeError):
   pass
 
@@ -74,8 +76,8 @@ class TelemetrizedRuntimeBase(RuntimeBase):
   def _T_new_tensor(self, t : Tensor, op_id):
     if self.stats:
       self.telemetry.register_tensor(t, op_id)
-    if t.op.name == 'constant':
-      self.telemetry.summary['model_pinned_memory'] += t.op.sizes[t.index]
+    if t.op.name.split('/')[0] == GOp.CONST_NAME:
+      self.telemetry.summary['model_const_memory'] += t.op.sizes[t.index]
 
   def _T_birth(self, t : Tensor):
     """
