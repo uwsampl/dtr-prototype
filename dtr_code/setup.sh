@@ -11,6 +11,9 @@
 python3 -m venv ~/dtr_venv
 
 pip3 install -r requirements.txt --user
+# our baseline PT was 1.5.0 for CUDA 10.1
+pip3 install torch==1.5.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+
 ~/dtr_venv/bin/pip3 install -r requirements.txt
 
 git clone --recursive https://github.com/pytorch/pytorch dtr_pytorch
