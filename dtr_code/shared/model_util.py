@@ -71,30 +71,63 @@ def binary_cross_entropy(x, y):
     return loss.mean()
 
 
-def get_model_type(model_name):
-    model_family = get_model_family(model_name)
-    if model_family in {'resnet', 'densenet', 'unet', 'inception', 'transformer', 'transformer_encoder'}:
-        return 'static'
-    if model_family in {'lstm', 'treelstm', 'gru', 'unroll_gan', 'lstm_encoder', 'gru_encoder'}:
-        return 'dynamic'
-    raise Exception(f'unknown family of {model_name}')
+def format_model_name(model_name, specific_params):
+    """
+    Given the model name and input parameters,
+    return a string ready to include as a name field in simulated graphs.
+    """
+    batch_size = specific_params['batch_size']
+    if 'resnet' in model_name:
+        layers = ''.join(filter(lambda x: x.isdigit(), model_name))
+        return f'ResNet-{layers} ({batch_size})'
+    if 'densenet' in model_name:
+        layers = ''.join(filter(lambda x: x.isdigit(), model_name))
+        return f'DenseNet-{layers} ({batch_size})'
+    if 'inception' in model_name:
+        version = model_name[-1]
+        return f'Inception V{version} ({batch_size})'
+    if 'treelstm' in model_name:
+        return 'TreeLSTM'
+    if model_name == 'unroll_gan':
+        return 'Unrolled GAN'
+    if model_name == 'lstm':
+        return f'LSTM ({batch_size})'
+    return model_name
 
 
-def get_model_layers(model_name):
-    if not ('resnet' in model_name or 'densenet' in model_name):
-        return 'default'
-
-    n = ''.join(filter(lambda x: x.isdigit(), model_name))
-    if len(n) > 0:
-        return n
-    else:
-        return 'default'
-
-
-def get_model_family(model_name):
-    if model_name.startswith('inception'):
-        return 'inception'
-    return ''.join(filter(lambda x: not x.isdigit(), model_name))
+def format_input_description(model_name, specific_params):
+    """
+    Given the model name and input parameters,
+    return a string ready to include as an input description in simulated graphs.
+    """
+    if 'treelstm' in model_name:
+        depth = specific_params['batch_size']
+        height = specific_params.get('input_size', 100)
+        width = specific_params.get('in_dim', 300)
+        return f'Binary tree of depth {depth}, node size {height}x{width}'
+    if 'lstm' in model_name:
+        length = specific_params['batch_size']
+        hidden_dim = specific_params.get('mem_dim', 300)
+        input_dim = specific_params.get('in_dim', 10)
+        return f'Input dimension {input_dim},\nHidden dimension {hidden_dim},\nSequence length {length}'
+    if model_name == 'transformer':
+        input_seq = specific_params.get('input_seq_length', 10)
+        target_seq = specific_params.get('target_seq_length', 20)
+        feature = specific_params.get('num_feature', 512)
+        return f'Input seq {input_seq},\ntarget seq {target_seq},\n{feature} features'
+    if model_name == 'unroll_gan':
+        configs = unroll_gan.configs.yes_higher_unroll
+        steps = specific_params.get('unrolled_steps', configs.unrolled_steps)
+        d_hid = specific_params.get('d_hid', configs.d_hid)
+        g_hid = specific_params.get('g_hid', configs.g_hid)
+        return f'{steps} steps, {d_hid}x{g_hid}'
+    height, width = 32, 32
+    if 'inception' in model_name:
+        height, width = 299, 299
+    if 'unet' in model_name:
+        height, width = 416, 608
+    height, width = specific_params.get('height', height), specific_params.get('width', width)
+    return f'{height}x{width}'
 
 
 def get_criterion(model: str):

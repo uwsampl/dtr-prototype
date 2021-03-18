@@ -11,9 +11,6 @@
 python3 -m venv ~/dtr_venv
 
 pip3 install -r requirements.txt --user
-# our baseline PT was 1.5.0 for CUDA 10.1
-pip3 install torch==1.5.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
-
 ~/dtr_venv/bin/pip3 install -r requirements.txt
 
 git clone --recursive https://github.com/pytorch/pytorch dtr_pytorch
@@ -38,6 +35,5 @@ cd higher
 pip3 install .
 ~/dtr_venv/bin/pip3 install .
 
-# You can now run the experiments from the dtr_code directory with the following commands:
-# export CUDA_LAUNCH_BLOCKING=1
+# You can now run the experiments from the dtr_code directory with the following command:
 # ./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments

@@ -12,7 +12,7 @@
       "inceptionv4",
       "lstm"
     ],
-    "dtr_torch_cmd": "~/dtr_venv/bin/python3",
+    "dtr_torch_cmd": "~/dtr_venv_clone_fix/bin/python3",
     "dry_run": 10,
     "n_inputs": 1,
     "n_reps": 50,

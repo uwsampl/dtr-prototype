@@ -3,6 +3,7 @@ dataclasses
 slackclient
 PyYAML
 librosa
+# torch==1.4.0 # leave commented out for initializing venv, uncomment for baseline
 numba==0.48
 seaborn
 numpy==1.17.3

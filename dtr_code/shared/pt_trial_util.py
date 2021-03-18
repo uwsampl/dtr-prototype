@@ -17,7 +17,7 @@ MEASURED_KEYS = ['time', 'gpu_time', 'input_mem', 'model_mem', 'total_mem', 'syn
                  'base_compute_time', 'remat_compute_time', 'search_time', 'cost_time', 'memory_budget']
 
 def create_csv_writer(csvfile, specific_params):
-    fieldnames = ['input', 'rep'] + MEASURED_KEYS + list(specific_params.keys())
+    fieldnames = ['input', 'rep', 'num_retries'] + MEASURED_KEYS + list(specific_params.keys())
     return csv.DictWriter(csvfile, fieldnames=fieldnames)
 
 
@@ -86,7 +86,8 @@ def run_trials(config_dir, python_cmd,
                trial_run=False,
                trial_run_outfile='',
                cmd_id=0,
-               conf_cnt=0):
+               conf_cnt=0,
+               sync_gpu=True):
     """
     Responsible for recording the time and max memory usage
     from running a model (the user must provide a lambda for
@@ -103,7 +104,9 @@ def run_trials(config_dir, python_cmd,
 
         cmd_id: the command id for current model, starting from 0 by default
         conf_cnt: the id of confguration generated from `unfold_settings`; this is used for tracking
-                  which exact configuration that caused errors. 
+                  which exact configuration that caused errors.
+        sync_gpu: Whether to set PyTorch into synchronous execution mode (synchronize between GPU ops),
+                  useful for profiling
     """
     try:
         cwd = os.getcwd()
@@ -126,6 +129,10 @@ def run_trials(config_dir, python_cmd,
 
             for i in range(n_inputs):
                 try:
+                    subprocess_env = None
+                    if sync_gpu:
+                        subprocess_env = os.environ.copy()
+                        subprocess_env['CUDA_LAUNCH_BLOCKING'] = '1'
                     subprocess.run(
                         [python_cmd, run_script,
                          '--config-dir', config_dir,
@@ -137,7 +144,8 @@ def run_trials(config_dir, python_cmd,
                          '--trial-run', str(trial_run),
                          '--trial-run-outfile', trial_run_outfile
                         ],
-                        check=True, timeout=specific_params.get('timeout', 60))
+                        check=True, timeout=specific_params.get('timeout', 60),
+                        env=subprocess_env)
                 except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                     if not report_errors:
                         raise e
@@ -262,7 +270,8 @@ def run_baseline(model, exp_config, config, config_dir, output_dir):
                               report_errors=config['report_errors'],
                               append_to_csv=False,
                               trial_run=True,
-                              trial_run_outfile=temp_file)
+                              trial_run_outfile=temp_file,
+                              sync_gpu=config['sync_gpu'])
     if not success:
         return False, 'Error while running baseline trial: \n{}'.format(msg)
 
@@ -283,18 +292,26 @@ def eval_command(model, exp_config, config, config_dir, output_dir, cmd_id):
             # in `unfold_settings`
             exp_config['memory_budget'] = result
 
+            # if there is a sampling cutoff and it's given as a ratio,
+            # convert it to a budget cutoff
+            if 'no_sampling_below_ratio' in exp_config:
+                threshold_ratio = exp_config['no_sampling_below_ratio']
+                if threshold_ratio != -1:
+                    exp_config['no_sampling_below_budget'] = threshold_ratio*result
+
         conf_cnt = 0
         for combo in unfold_settings(exp_config):
             success, msg = run_trials(config_dir,
-                                    python_command(combo['type'], config),
-                                    combo['type'], model, combo,
-                                    config['n_inputs'],
-                                    output_dir,
-                                    report_errors=config['report_errors'],
-                                    append_to_csv=False,
-                                    trial_run=False,
-                                    cmd_id=cmd_id,
-                                    conf_cnt=conf_cnt)
+                                      python_command(combo['type'], config),
+                                      combo['type'], model, combo,
+                                      config['n_inputs'],
+                                      output_dir,
+                                      report_errors=config['report_errors'],
+                                      append_to_csv=False,
+                                      trial_run=False,
+                                      cmd_id=cmd_id,
+                                      conf_cnt=conf_cnt,
+                                      sync_gpu=config['sync_gpu'])
             if not success:
                 return False, msg
             conf_cnt += 1
@@ -386,6 +403,7 @@ def collect_raw_measurements(experiment_name, model, specific_params, path_prefi
     metrics = {}
 
     memory_budget = None
+    num_retries = None
 
     with open(full_path, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -400,6 +418,9 @@ def collect_raw_measurements(experiment_name, model, specific_params, path_prefi
             if memory_budget is None and specific_params.get('kind') == 'ratio':
                 memory_budget = float(row['memory_budget'])
 
+            if num_retries is None:
+                num_retries = int(row['num_retries'])
+
             if idx not in metrics.keys():
                 metrics[idx] = {
                     key: [] for key in MEASURED_KEYS
@@ -408,7 +429,7 @@ def collect_raw_measurements(experiment_name, model, specific_params, path_prefi
             for key in MEASURED_KEYS:
                 metrics[idx][key].append(measured[key])
 
-    return (metrics, memory_budget, 'success')
+    return (metrics, memory_budget, num_retries, 'success')
 
 
 def compute_slowdowns(exp_times, baseline_times):
@@ -418,12 +439,14 @@ def compute_slowdowns(exp_times, baseline_times):
     """
     return [exp_times[i]/baseline_times[i] for i in range(len(exp_times))]
 
+
 def compute_throughputs(batch_size, gpu_times):
     """
     Given a batch size and an array of time running on GPU,
     returns an array of throughputs
     """
     return [batch_size / gpu_times[i] * 1000 for i in range(len(gpu_times))]
+
 
 def parse_data_file(experiment_name, model, config, specific_params, path_prefix, cmd_id=0, baseline_params=None):
     """
@@ -439,7 +462,8 @@ def parse_data_file(experiment_name, model, config, specific_params, path_prefix
     """
     try:
         report_errors = config['report_errors']
-        metrics, budget, msg = collect_raw_measurements(experiment_name, model, specific_params, path_prefix, cmd_id)
+        metrics, budget, num_retries, msg = collect_raw_measurements(experiment_name, model,
+                                                                     specific_params, path_prefix, cmd_id)
         if metrics is None:
             return (None, msg)
 
@@ -447,6 +471,7 @@ def parse_data_file(experiment_name, model, config, specific_params, path_prefix
             specific_params['memory_budget'] = float(budget)
 
         summary = {
+            'num_retries': num_retries,
             'specific_params': specific_params
         }
 
@@ -464,7 +489,9 @@ def parse_data_file(experiment_name, model, config, specific_params, path_prefix
             and specific_params.get('kind') == 'ratio'
             and baseline_params is not None):
 
-            baseline_metrics, _, baseline_msg = collect_raw_measurements(baseline_params['type'], model, baseline_params['specific_params'], path_prefix, baseline_params['cmd_id'])
+            baseline_metrics, _, _, baseline_msg = collect_raw_measurements(
+                baseline_params['type'], model, baseline_params['specific_params'],
+                path_prefix, baseline_params['cmd_id'])
             if baseline_metrics is None:
                 return (None, baseline_msg)
 
@@ -491,7 +518,7 @@ def parse_data_file(experiment_name, model, config, specific_params, path_prefix
 
             if 'throughput' in stat:
                 summary_dict['throughput'] = compute_summary_stats(stat['throughput'], bootstrap=True)
-               
+
             summary_stats.append(summary_dict)
 
         summary['summary'] = summary_stats

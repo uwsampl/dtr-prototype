@@ -46,6 +46,8 @@ MARKER_SCHEME = {
     'inceptionv4' : 'D'
 }
 
+LOWEST_BUDGET_NON_SAMPLED = ['unet', 'tv_densenet121', 'inceptionv4']
+
 # Generated color scheme
 breakdown_color_scheme = {
     'dispatch_overhead' : 'black',
@@ -135,13 +137,9 @@ def fill_data(data_dict, stat):
 
 
 def render_errorbars(ax, x_axis, entries, confidence):
-    upper = list(map(lambda x: x[1], confidence))
-    lower = list(map(lambda x: x[0], confidence))
-    lolims = [True] * len(upper)
-    uplims = [False] * len(upper)
-    ax.errorbar(x_axis, entries, yerr=upper, lolims=lolims, uplims=uplims)
-    ax.errorbar(x_axis, entries, yerr=lower, lolims=lolims, uplims=uplims)
-
+    upper = list(map(lambda x: abs(x[1]), confidence))
+    lower = list(map(lambda x: abs(x[0]), confidence))
+    ax.errorbar(x_axis, entries, yerr=[lower, upper], fmt='--o')
 
 def render_field(model_name, output_dir, title, filename, x_label, y_label, x_axis,
                  baseline_entries, dtr_entries, failed_trials, confidence=None, suptitle=''):
@@ -149,8 +147,6 @@ def render_field(model_name, output_dir, title, filename, x_label, y_label, x_ax
         return (True, 'nothing to render')
     file = prepare_out_file(output_dir, filename)
     try:
-        # min_x = min(*(x_axis + failed_trials))
-        # max_x = max(*(x_axis + failed_trials))
         ax = plt.gca()
         if dtr_entries:
             lin, = ax.plot(x_axis, dtr_entries, color=COLOR_SCHEME.get(model_name, 'black'), linewidth=4)
@@ -160,126 +156,126 @@ def render_field(model_name, output_dir, title, filename, x_label, y_label, x_ax
             if confidence:
                 render_errorbars(ax, x_axis, dtr_entries, confidence)
             ax.legend([(lin, mk)], ['merged'])
-        # if baseline_entries:
-        #     plt.hlines(y=baseline_entries[0], xmin=min_x, xmax=max_x, linewidth=3,
-        #                label='Baseline', color='blue', linestyles='dashed')
-
         if failed_trials:
             plt.axvline(x=max(failed_trials), color=COLOR_SCHEME.get(model_name, 'black'), linestyle='dashed')
 
-        # fig = plt.legend().figure
-        # fig.savefig(file)
         return (True, 'success')
     except Exception as e:
         raise e
         return (False, 'Exception encountered while rendering graph: {}'.format(render_exception(e)))
 
 
-def render_fixed(ax, model_name, output_dir, x_axis, dtr_entries, baseline_data, failed_trials, batch_size=None, confidence=None):
+def render_fixed(ax, model_name, output_dir, x_axis, dtr_entries, baseline_data, failed_trials, batch_size=None, confidence=None, render_confidence=False):
     if not (dtr_entries or failed_trials):
         return (True, 'nothing to render')
-    filename = prepare_out_file(output_dir, f'{NAME_DICT.get(model_name, model_name)}-fixed-gpu-time.png')
+    filename = prepare_out_file(output_dir, f'{model_name}-fixed-gpu-time.png')
     try:
-        # plt.style.use('seaborn-paper')
-        # plt.rcParams["font.size"] = 30
-        # fig = plt.figure()
-        # fig.add_subplot(111, frameon=False)
-        # fig.set_size_inches(12, 7)
-        # plt.xticks(fontsize=13)
-        # plt.yticks(fontsize=13)
-        # plt.xlabel('Memory Budget (MB)', fontsize=15, labelpad=10)
-        # plt.ylabel(r'Compute Time (ms)', fontsize=15, labelpad=10)
-        # plt.title(f'{NAME_DICT.get(model_name, model_name)} GPU Time', fontsize=18)
-        # plt.grid(True)
+        if render_confidence:
+            plt.clf()
+            plt.style.use('seaborn-paper')
+            plt.rcParams["font.size"] = 30
+            fig = plt.figure()
+            fig.add_subplot(111, frameon=False)
+            fig.set_size_inches(12, 7)
+            plt.xticks(fontsize=13)
+            plt.yticks(fontsize=13)
+            plt.xlabel('Memory Budget (GiB)', fontsize=15, labelpad=10)
+            plt.ylabel(r'Compute Time (ms)', fontsize=15, labelpad=10)
+            plt.title(f'{NAME_DICT.get(model_name, model_name)} GPU Time', fontsize=18)
+            plt.grid(True)
 
-        # ax = plt.gca()
-        width = 0.0
-        all_axis = sorted(x_axis + failed_trials)
-        ind = np.arange(len(all_axis) + 1)
-        ind_index = dict(zip(all_axis, ind))
-        ind_pos = dict([(ind[i], i) for i in range(len(ind))])
-        ax.set_xticks(ind + width / 2)
-        ax.set_xticklabels(map(lambda x: f'{round(x * 1e-9, 1)}', all_axis + [baseline_data['mem'] * 1e+6]))
+            ax = plt.gca()
+            budgets = list(map(lambda x: x * 1e-9, x_axis))
+            y_value = list(map(lambda x: x['cpu_time'], dtr_entries))
+            if dtr_entries:
+                if model_name == 'unroll_gan':
+                    print('Unroll GAN:')
+                    print(budgets, y_value)
+                upper = list(map(lambda x: abs(x[1]), confidence))
+                lower = list(map(lambda x: abs(x[0]), confidence))
+                plt.errorbar(budgets, y_value, yerr=upper, uplims=True, lolims=False)
+                plt.errorbar(budgets, y_value, yerr=lower, lolims=True, uplims=False)
 
-        ax.tick_params(axis='both', labelsize=20)
-
-        filtered_entries = []
-
-        if baseline_data and 'cpu_time' in baseline_data:
-            for (x, datum) in zip(x_axis, dtr_entries):
-                if not datum.get('error', False) and 'cpu_time' in datum and datum['cpu_time'] > 3 * baseline_data['cpu_time']:
-                    failed_trials.append(x)
-                    filtered_entries.append({key : 0 for key in datum.keys()})
-                else:
-                    filtered_entries.append(datum)
-
-        dtr_entries = filtered_entries
-
-        if failed_trials:
-            for x in failed_trials:
-                ax.axvline(x=ind_index[x], color='red', linestyle='dashed', label='OOM')
-        new_ind = []
-        for x in x_axis:
-            new_ind.append(ind_index[x])
-        new_ind.append(ind[-1])
-        ind = np.array(new_ind)
-        ax.grid(True, axis='y')
-        ax.set_title(f'{NAME_DICT.get(model_name, model_name)} ({batch_size})\n{input_sizes.get(model_name, "")}', fontsize=15)
-
-        for x in failed_trials:
-            ax.bar(ind_index[x], 0)
-        if dtr_entries:
-            # lin, = ax.plot(x_axis, dtr_entries, color=COLOR_SCHEME.get(model_name, 'black'), linewidth=4)
-            # mk,  = ax.plot(x_axis, dtr_entries, label=NAME_DICT.get(model_name, model_name),
-            #               linewidth=4, marker=MARKER_SCHEME.get(model_name, '+'), ms=12,
-            #               alpha=.6, color=COLOR_SCHEME.get(model_name, 'black'))
-            data_collection = { key : [] for key in timed_keys }
-            data_collection['dispatch_overhead'] = []
-            for entry in dtr_entries:
-                acc = 0
-                for (k, v) in entry.items():
-                    if k != 'cpu_time':
-                        data_collection[k].append(v)
-                        acc += v
-                data_collection['dispatch_overhead'].append(entry['cpu_time'] - acc)
-
-            acc = np.zeros(len(x_axis))
-            for k in timed_keys + ['dispatch_overhead']:
-                # print(ind[:-1], data_collection[k])
-                ax.bar(ind[:-1], data_collection[k], label=breakdown_namedict.get(k, k),
-                               color=breakdown_color_scheme.get(k, 'red'),
-                                bottom=acc)
-                acc = acc + data_collection[k]
+            plt.tight_layout()
+            plt.savefig(filename, bbox_inches = 'tight')
+        else:
+            width = 0.0
+            all_axis = sorted(x_axis + failed_trials)
+            ind = np.arange(len(all_axis) + 1)
+            ind_index = dict(zip(all_axis, ind))
+            ind_pos = dict([(ind[i], i) for i in range(len(ind))])
+            ax.set_xticks(ind + width / 2)
+            filtered_entries = []
 
             if baseline_data and 'cpu_time' in baseline_data:
-                ax.bar([ind[-1]], baseline_data['cpu_time'], label='Unmodified\nPyTorch', color='blue')
-            else:
-                ax.bar([ind[-1]], 0, label='Unmodified PyTorch', color='blue')
-                ax.axvline(ind[-1], color='red', linestyle='dashed', label='OOM')
+                for (x, datum) in zip(x_axis, dtr_entries):
+                    if not datum.get('error', False) and 'cpu_time' in datum and datum['cpu_time'] > 3 * baseline_data['cpu_time']:
+                        failed_trials.append(x)
+                        filtered_entries.append({key : 0 for key in datum.keys()})
+                    else:
+                        filtered_entries.append(datum)
 
-            if confidence and False:
-                render_errorbars(ax, x_axis, dtr_entries, confidence)
+            failed_trials_str = list(map(lambda x: f'{round(x * 1e-9, 1)}', failed_trials))
+            labels = list(map(lambda x: f'{round(x * 1e-9, 1)}', all_axis + [baseline_data.get('mem', 12000) * 1e+6]))
+            if model_name in LOWEST_BUDGET_NON_SAMPLED:
+                for i in range(len(labels)):
+                    if labels[i] not in failed_trials_str:
+                        labels[i] = f'{labels[i]}$^*$'
+                        break
+            ax.set_xticklabels(labels)
+            ax.tick_params(axis='both', labelsize=20)
 
-            ax.invert_xaxis()
-            # ax.legend([(lin, mk)], ['merged'])
+            dtr_entries = filtered_entries
 
-                # plt.legend(
-        #         bbox_to_anchor=(0.5,0.01),
-        #         loc='lower center',
-        #         bbox_transform=fig.transFigure,
-        #         ncol=7,
-        #         borderaxespad=0,
-        #         prop={'size': 15}
-        #     )
-        # plt.tight_layout()
-        # plt.savefig(filename, bbox_inches = 'tight')
+            if failed_trials:
+                for x in failed_trials:
+                    ax.axvline(x=ind_index[x], color='red', linestyle='dashed', label='OOM')
+            new_ind = []
+            for x in x_axis:
+                new_ind.append(ind_index[x])
+            new_ind.append(ind[-1])
+            ind = np.array(new_ind)
+            ax.grid(True, axis='y')
+            ax.set_title(f'{NAME_DICT.get(model_name, model_name)} ({batch_size})\n{input_sizes.get(model_name, "")}', fontsize=15)
+
+            for x in failed_trials:
+                ax.bar(ind_index[x], 0)
+            if dtr_entries:
+                data_collection = { key : [] for key in timed_keys }
+                data_collection['dispatch_overhead'] = []
+                for entry in dtr_entries:
+                    acc = 0
+                    for (k, v) in entry.items():
+                        if k != 'cpu_time':
+                            data_collection[k].append(v)
+                            acc += v
+                    data_collection['dispatch_overhead'].append(entry['cpu_time'] - acc)
+
+                acc = np.zeros(len(x_axis))
+                for k in timed_keys + ['dispatch_overhead']:
+                    ax.bar(ind[:-1], data_collection[k], label=breakdown_namedict.get(k, k),
+                                color=breakdown_color_scheme.get(k, 'red'),
+                                    bottom=acc)
+                    acc = acc + data_collection[k]
+
+                if baseline_data and 'cpu_time' in baseline_data:
+                    ax.bar([ind[-1]], baseline_data['cpu_time'], label='Unmodified\nPyTorch', color='blue')
+                else:
+                    ax.bar([ind[-1]], 0, label='Unmodified PyTorch', color='blue')
+                    ax.axvline(ind[-1], color='red', linestyle='dashed', label='OOM')
+
+                if confidence and False:
+                    render_errorbars(ax, x_axis, dtr_entries, confidence)
+
+                ax.invert_xaxis()
+
         return (True, 'success')
     except Exception as e:
         raise e
         return (False, render_exception(e))
 
 
-def render_time_comparison(model, batch_size, exp_kind, dtr_data, baseline_data, output_dir, plt_ax=None):
+def render_time_comparison(model, batch_size, exp_kind, dtr_data, baseline_data, output_dir, plt_ax=None, render_confidence=False):
     # filename : model-batch_size-exp_kind-[time|gpu_time|mem]
     filename_template= f'{str(datetime.datetime.now()).replace(" ", "-")}-{model}-{batch_size}-{exp_kind}-' + '{}' + '.png'
     if exp_kind == 'ratio':
@@ -321,11 +317,13 @@ def render_time_comparison(model, batch_size, exp_kind, dtr_data, baseline_data,
         data = list(map(lambda x: {field : x[field]
                                     for field in ['cpu_time'] + timed_keys }, dtr_entries))
         err = list(map(lambda x: x['cpu_conf'], dtr_entries))
-        # x_axis = list(map(lambda x: x['mem'] * 1e+6, dtr_entries))
+        print(err)
+        print(list(map(lambda x: x['cpu_time'], dtr_entries)))
 
         confidence = [(interval[0] - measurement, interval[1] - measurement)
                 for interval, measurement in zip(err, list(map(lambda x: x['cpu_time'], dtr_entries)))]
-        success, msg = render_fixed(plt_ax, model, output_dir, x_axis, data, baseline_data, failed_trials, confidence=confidence, batch_size=batch_size)
+        print('Confidence: {}'.format(confidence))
+        success, msg = render_fixed(plt_ax, model, output_dir, x_axis, data, baseline_data, failed_trials, confidence=confidence, batch_size=batch_size, render_confidence=render_confidence)
     else:
         raise Exception(f'{exp_kind} is not a valid kind')
 
@@ -579,10 +577,6 @@ def render_graph(config, data, output_dir):
                                                 output_dir)
 
         filename = prepare_out_file(output_dir, 'combined-breakdown-comparison.png')
-        # figure.tight_layout()
-        # plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-        # plt.xlabel('Memory Budget (GiB)')
-        # plt.ylabel("Time (ms)")
         figure.text(0.5, 0.02, r'\textbf{\Huge Memory Budget (GiB)}', ha='center')
         figure.text(0.09, 0.5, r'\textbf{\Huge Time (ms) / Batch}', ha='center', va='center', rotation='vertical')
         plt.legend(
@@ -593,14 +587,18 @@ def render_graph(config, data, output_dir):
             borderaxespad=0,
             prop={'size': 15}
         )
-       # figure.tight_layout()
-        # plt.tight_layout()
-        # plt.tight_layout(h_pad=0.3)
         plt.subplots_adjust(hspace=0.4)
         plt.savefig(filename, bbox_inches='tight', pad_inches=0.4)
 
         if not success:
             return (False, msg)
+        
+        success, msg = traverse_field(metadata, 'fixed',
+                lambda model, batch_size, dtr_dict, baseline_dict, output_dir:\
+                        render_time_comparison(model, batch_size, 'fixed',
+                                                dtr_dict[batch_size]['fixed'],
+                                                baseline_dict.get(batch_size, {}), output_dir, plt_ax=None, render_confidence=True),
+                                                output_dir)
 
         success, msg = render_throughput_breakdown(metadata, output_dir)
         if not success:

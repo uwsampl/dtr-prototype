@@ -2,21 +2,20 @@
 
 DTR Authors: Marisa Kirisame, Steven Lyubomirsky, Altan Haan, Jennifer Brennan, Mike He, Jared Roesch, Tianqi Chen, Zachary Tatlock
 
-## Repository Contents
+## Archive Contents
 
-This repo contains the following:
-* `data_files`: Data produced from runs in the prototype evaluation figures in the paper
+This archive contains the following:
+* `data_files`: Data produced from runs in the prototype evaluation figures
 * `dtr_configs`: Configuration files for running the prototype DTR implementation
 * `dtr_code`: DTR prototype implementation and infrastructure for running the experimental evaluation
 * `simrd`: Simulator implementation and logs used to generate figures in the simulated evaluation
 * `checkmate_comp`: Modified version of Jain et al's MLSys 2020 reproducibility artifact that includes comparisons against `simrd` as a solver
 
-This corresponds to the versions of the simulated and PyTorch implementation in the present preprint;
-we may make our development repositories public once they become more stable.
-
 Note: We ran the simulated and prototype evaluation using Python 3.7.4 on an Ubuntu 18.04 machine with an NVidia Titan-V GPU (12 GB memory), using CUDA 10.1 and CuDNN 7.5.4. We documented every dependency we were aware of, but it is possible that we were unaware of OS-level dependenices.
 
-## Running the Simulator
+## Running the DTR Simulator
+
+The simulator is named "simrd": Simulated (tensor) rematerialization, dynamic
 
 ### Setup
 #### Step 1. Install Anaconda and set up environment
@@ -121,11 +120,11 @@ The results will be saved under `data/budget_sweep`.
 
 All one-time setup is collected in `setup.sh`. Once all the setup is complete, a configuration of the prototype can be run by calling `./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments`
 
-*Important*: Please ensure to set the environment variable `export CUDA_LAUNCH_BLOCKING=1` to put PyTorch into blocking mode before running timing trials. This is required to ensure the correctness of DTR's profiling timings.
+*Important*: Please ensure the configuration variable `sync_gpu` is set to `true` to put PyTorch into blocking mode before running timing trials. This is required to ensure the correctness of DTR's profiling timings.
 
 You can change the configuration of the prototype by substituting `dtr_home/config/experiments/pareto_curve/config.json` with one of the configuration files in `dtr_configs`. See below for how to post a summary to Slack (most convenient). Any visualizations produced will be found in `dtr_home/results/experiments/graph` and data files (like those in `data_files`) will be in `dtr_home/results/experiments/data`. If logging is enabled in the configuration (`"save_logs"`), logs will be deposited in `~/dtr_logs` (configurable under `"log_dest"`).
 
-To reproduce the graph in Figure 5 without having to rerun the eval, you can run `./dtr_code/graphing_util/visualize_pareto_curve.py dtr_configs/full-run-config.json data_files/data_full`.  
+To reproduce the graph in Figure 5 without having to rerun the eval, you can run `./dtr_code/graphing_util/visualize_pareto_curve.py dtr_configs/full-run-config.json data_files/data-full.json`.  
 
 ### Commands and Reading Results
 
@@ -133,16 +132,15 @@ These experiments use a dashboard infrastructure provided in the `dashboard` dir
 
 It is recommended, though not necessary, that you use the dashboard's Slack integration to post results to Slack (requires a webhook URL, which can be created by following the steps here: https://api.slack.com/messaging/webhooks). This functionality can be configured in `dtr_home/config/subsystem/exp_results/config.json` (filling in the webhook URL field).
 
-We provide three configs in `dtr_configs` that can be used for running the same experiments as in the paper:
+We provide two configs in `dtr_configs` that can be used for running the same experiments as in the paper:
 
-* `data-full.json` for generating the prototype data used in the profiling comparison in Figure 4
-* `data-big-inputs.json` for generating the prototype performance data reported in Table 1
+* `full-run-config.json` for generating the prototype data used in the profiling comparison in Figure 4
+* `table-data-run-config.json` for generating the prototype performance data reported in Table 1
 
 Simply substitute one of these files for the config in `dtr_home/config/experiments/pareto_curve/config.json` (please ensure it will still be named `config.json`) in order to run with their settings.
 
 Once configured, the dashboard can be invoked as follows: 
 ```
-export CUDA_LAUNCH_BLOCKING=1
 ./dashboard/dashboard/run_dashboard.sh ./dtr_home ./dtr_eval/dtr_experiments
 ```
 
@@ -202,13 +200,7 @@ Once these steps are finished, `~/dtr_venv/bin/python3` will point to a Python e
 
 ### Supported Models
 
-See `dtr_eval/shared/validate_config.py` for a list of all supported models, taken from various public implementations (noted in their definitions in `dtr_eval/shared/torch_models`).
-
-In particular, the models include, among others, `resnet32`, `resnet1202`, `densenet100`, `unet`, and `unroll_gan`, adapted from various public implementations:
-* https://github.com/akamaster/pytorch_resnet_cifar10
-* https://github.com/bamos/densenet.pytorch
-* https://github.com/milesial/Pytorch-UNet
-* https://github.com/mk-minchul/unroll_gan
+See `dtr_eval/shared/validate_config.py` for a list of all included models, taken from various public implementations (noted in their definitions in `dtr_eval/shared/torch_models`). 
 
 ### Saving DTR Logs
 
@@ -218,7 +210,8 @@ The final run in the log will be marked with a "`START`" annotation.
 
 ### Experiment Commands
 
-The experiment commands are defined in `dtr_settings`.
+See `dtr_configs/README.md` for a description of configuration settings.
+
 To add commands for the experiment of a `model`, add a `JSONObject` that has the following structure:
 ```json
 {
