@@ -146,7 +146,7 @@ Once configured, the dashboard can be invoked as follows:
 
 ### Creating the PyTorch Code
 
-Due to PyTorch's use of submodules and our own additional dependencies, we do need to provide a properly configured git repository with a history. To preserve anonymity, we do this by providing a git patch that, if applied to the correct commit of PyTorch, will restore our code. The file is provded as `dtr-implementation.patch`.
+Due to PyTorch's use of submodules and our own additional dependencies, we do need to provide a properly configured git repository with a history. We do this by providing a git patch that, if applied to the correct commit of PyTorch, will restore our code. The file is provded as `dtr-implementation.patch`.
 
 The following steps will restore the PyTorch code:
 ```
