@@ -10,7 +10,7 @@ numpy==1.17.3
 tqdm==4.31.1
 pandas==0.24.2
 matplotlib==2.2.3
-Pillow==5.1.0
+Pillow==9.0.0
 requests==2.21.0
 decorator==4.3.0
 attrs==18.1.0
