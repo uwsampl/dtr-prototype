@@ -11,7 +11,7 @@ tqdm==4.31.1
 pandas==0.24.2
 matplotlib==2.2.3
 Pillow==5.1.0
-requests==2.21.0
+requests==2.31.0
 decorator==4.3.0
 attrs==18.1.0
 antlr4-python3-runtime==4.7.2
